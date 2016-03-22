@@ -1,0 +1,49 @@
+hiera usage:
+
+puppet-host.yaml
+
+---
+
+#Defaults of ec2 roles
+aws_puppet_mgmt::ec2_roles:
+  generic:
+    ensure: present
+    region: eu-west-1
+    image_id: ami-98be04eb
+    instance_type: m3.medium
+    key_name: CLI_Deploy
+    subnet: ec2_generic
+    security_groups: 'Allow all'
+    block_devices:
+      - device_name: /dev/sda1
+        delete_on_termination: true
+        volume_size: 12
+
+#Example
+aws_puppet_mgmt::ec2_instances:
+  techops-test-ec2:
+    role: generic
+
+aws_puppet_mgmt::gems:
+  aws-sdk-core: {}
+  retries: {}
+
+puppet::runmode: cron   # we don't run puppet agent service on puppetserver host, cronjob applies all changes
+puppet::cron_cmd: "/opt/puppetlabs/bin/puppet apply --modulepath=/etc/puppetlabs/code/environments/%{hiera('puppet::environment')}/modules --hiera_config /etc/puppetlabs/code/hiera.yaml -e \"include role::puppet_new\" --environment %{hiera('puppet::environment')}"
+puppet::server: true
+puppet::server_foreman: false
+puppet::server_passenger: false
+puppet::server_implementation: puppetserver
+puppet::server_reports: puppetdb
+puppet::server_environments: "%{hiera('puppet::environment')}"  #  code path
+puppet::environment: test          # default environment
+puppet::server_environments_mode: "0775"
+puppet::server_external_nodes: ''
+puppet::additional_settings:
+  server: puppet-ec2-test.improve
+puppet::hiera_config: /etc/puppetlabs/code/hiera.yaml
+#puppetdb settings
+puppet::server_storeconfigs_backend: puppetdb
+puppetdb::listen_address: 0.0.0.0
+puppetdb::database: embedded
+puppetdb::manage_firewall: false

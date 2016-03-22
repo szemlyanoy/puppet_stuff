@@ -1,0 +1,31 @@
+#!/bin/bash
+hostnamectl set-hostname <%= @title %>.improve
+# Removing below to avoid triggering cloud-init updates after each reboot
+sed -i '/update_hostname/d' /etc/cloud/cloud.cfg;sed -i '/update_etc_hosts/d' /etc/cloud/cloud.cfg
+rpm -ivh https://yum.puppetlabs.com/puppetlabs-release-el-<%= @facts['os']['release']['major'] %>.noarch.rpm
+yum install ipa-client -y
+
+cat > /opt/techops_key << EOF
+-----BEGIN RSA PRIVATE KEY-----
+-----END RSA PRIVATE KEY-----
+EOF
+
+chmod 400 /opt/techops_key
+IP=`curl http://169.254.169.254/latest/meta-data/local-ipv4`
+Password=`tr -dc A-Za-z0-9_ < /dev/urandom | head -c 12`
+
+#Precreating host in LDAP
+ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i /opt/techops_key techops@ldap1.improve "/usr/bin/kinit enroll_svc@IMPROVE -k -t /home/techops/enroll_svc.keytab && /usr/bin/ipa host-add <%= @title %>.improve --ip-address=$IP --password=$Password"
+#Enrolling host to LDAP
+/usr/sbin/ipa-client-install --domain=IMPROVE --enable-dns-updates --mkhomedir -w $Password --realm=IMPROVE --server=ldap1.improve --server=ldap2-ec2-prod.improve --hostname=<%= @title %>.improve --unattended --no-ntp
+#Adding host to hostgroup
+ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i /opt/techops_key techops@ldap1.improve "/usr/bin/kinit enroll_svc@IMPROVE -k -t /home/techops/enroll_svc.keytab && /usr/bin/ipa hostgroup-add-member ec2-vpc --hosts=<%= @title %>.improve"
+
+rm -f /opt/techops_key
+
+#Enable puppet repo
+rpm -Uvh https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
+#Installing puppet
+yum install -y puppet-agent
+#Enabling puppet agent
+systemctl restart puppet.service

@@ -1,0 +1,27 @@
+echo "Checking if host exists in IPA"
+ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ./techops_key techops@ldap1.improve "/usr/bin/kinit svc_removal@IMPROVE -k -t /home/techops/svc_removal.keytab && /usr/bin/ipa host-show <%= $ec2_fqdn %> 1>/dev/null"
+        if [ $? -eq 0  ]
+        then
+                echo "Removing host from IPA..."
+                ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ./techops_key techops@ldap1.improve "/usr/bin/kinit svc_removal@IMPROVE -k -t /home/techops/svc_removal.keytab && /usr/bin/ipa host-del <%= $ec2_fqdn %>"
+fi
+echo "Host is absent in IPA"
+
+echo "Flushing dns record"
+ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ./techops_key techops@ldap1.improve "/usr/bin/kinit svc_removal@IMPROVE -k -t /home/techops/svc_removal.keytab && /usr/bin/ipa dnsrecord-del improve <%= $ec2_name %> --del-all"
+
+echo "Flushing ptr record"
+ptr=`ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ./techops_key techops@ldap1.improve "/usr/bin/kinit svc_removal@IMPROVE -k -t /home/techops/svc_removal.keytab && /usr/bin/ipa dnsrecord-find 10.22.10.in-addr.arpa. --ptr-rec=<%= $ec2_fqdn %> | grep \"Record name:\" | cut -d \":\" -f2"`
+for ptr_rec in $ptr
+do
+        ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ./techops_key techops@ldap1.improve "/usr/bin/kinit svc_removal@IMPROVE -k -t /home/techops/svc_removal.keytab &&  /usr/bin/ipa dnsrecord-del 10.22.10.in-addr.arpa. $ptr_rec --del-all"
+done
+
+#Remove host certificates from Puppet
+echo "Checking if certificate exists in puppet"
+ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ./techops_key techops@puppet.improve "/usr/bin/sudo /opt/puppetlabs/bin/puppet cert list --all | grep <%= $ec2_fqdn %> > /dev/null"
+if [ $? -eq 0 ]
+        then
+                echo "Puppet certificate will be cleaned"
+                ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ./techops_key techops@puppet.improve "/usr/bin/sudo /opt/puppetlabs/bin/puppet cert clean <%= $ec2_fqdn %>"
+fi
