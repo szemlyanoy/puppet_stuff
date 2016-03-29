@@ -31,7 +31,7 @@ define aws_puppet_mgmt::ec2_instance_wrapper(
    instance_type => $instance_type,
    subnet  => $subnet,
    security_groups  => $security_groups,
-   user_data => template('aws_puppet_mgmt/aws_ec2_init.sh.erb'),
+   user_data => template('files/aws_ec2_init.sh.erb'),
    block_devices => $block_devices,
    key_name  => $key_name,
    monitoring  => $monitoring,
@@ -54,5 +54,4 @@ define aws_puppet_mgmt::ec2_instance_wrapper(
   if $ensure == 'absent' {
     aws_puppet_mgmt::ec2_instance_flusher{ $title: }
   }
-
 }
