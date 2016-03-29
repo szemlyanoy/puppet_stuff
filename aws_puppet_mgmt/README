@@ -47,3 +47,22 @@ puppet::server_storeconfigs_backend: puppetdb
 puppetdb::listen_address: 0.0.0.0
 puppetdb::database: embedded
 puppetdb::manage_firewall: false
+
+#Example
+aws_puppet_mgmt::ec2_instances:
+  szemlyanoy3:
+    role: generic
+    ensure: stopped
+  szemlyanoy4:
+    role: generic
+    ensure: absent
+  szemlyanoy5:
+    role: generic
+    ensure: present
+  szemlyanoy6:
+    role: generic
+    ensure: present
+    block_devices:
+      - device_name: /dev/sda1
+        delete_on_termination: true
+        volume_size: 11
