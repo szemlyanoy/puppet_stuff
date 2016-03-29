@@ -20,6 +20,23 @@ class aws_puppet_mgmt
   }
 */
 
+ file { '/opt/aws_module':
+    ensure  => directory,
+    owner   => root,
+    group   => root,
+    purge   => true,
+    recurse => true,
+    mode    => '0750',
+  }
+
+  file { "/root/.ssh/techops_key":
+    ensure => present,
+    mode   => "0400",
+    owner  => root,
+    group  => root,
+    source => 'puppet:///modules/users/techops_rsa',
+  }
+  
   $ec2_instances = hiera_hash('aws_puppet_mgmt::ec2_instances', {})
   create_resources('aws_puppet_mgmt::ec2_instance_wrapper_roles', $ec2_instances, {})
 }
