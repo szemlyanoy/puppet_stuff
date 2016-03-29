@@ -1,18 +1,10 @@
 define aws_puppet_mgmt::ec2_instance_flusher (
   $ec2_name = $title,
 ){
-  file { "/root/.ssh/techops_key":
-    ensure => present,
-    mode   => "0400",
-    owner  => root,
-    group  => root,
-    source => 'puppet:///modules/users/techops_rsa',
-  }
-
   $ec2_fqdn = "${ec2_name}.improve"
  # notify{$ec2_fqdn:}
 
-  file { "/opt/aws_module/flushing_${ec2_fqdn}":
+  file { "/opt/aws_module/flushing_${ec2_fqdn}.sh":
     ensure => present,
     mode   => "0500",
     owner  => root,
@@ -21,4 +13,8 @@ define aws_puppet_mgmt::ec2_instance_flusher (
     require => File['/opt/aws_module'],
   }
 
+  exec {"${ec2_fqdn}_flushing":
+    command  => "/opt/aws_module/flushing_${ec2_fqdn}.sh",
+    require  => File["/opt/aws_module/flushing_${ec2_fqdn}.sh"],
+  }
 }
